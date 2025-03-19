@@ -40,4 +40,9 @@ const app = spawn('node', ['start-all.js'], {
 app.on('close', (code) => {
   console.log(`⚠️ Приложение завершило работу с кодом: ${code}`);
   process.exit(code);
+});
+
+app.enableCors({
+  origin: [process.env.FRONTEND_URL, 'https://postiz-app-test.vercel.app'],
+  credentials: true,
 }); 
