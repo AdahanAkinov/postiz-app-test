@@ -3,9 +3,12 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 
-// Получаем URL из переменных окружения или используем значения по умолчанию
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+// Константы для URL'ов
+const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || 'http://localhost:3000';
+const FRONTEND_URL = 'http://localhost:4200';
+
+console.log(`[Proxy] Настроен на бэкенд: ${BACKEND_URL}`);
+console.log(`[Proxy] Настроен на фронтенд: ${FRONTEND_URL}`);
 
 // Прокси для бэкенда
 app.use('/api', createProxyMiddleware({
@@ -14,17 +17,19 @@ app.use('/api', createProxyMiddleware({
   pathRewrite: {
     '^/api': '', // удаляем /api из пути
   },
+  logLevel: 'debug'
 }));
 
 // Прокси для фронтенда
 app.use('/', createProxyMiddleware({
   target: FRONTEND_URL,
   changeOrigin: true,
+  ws: true, // поддержка веб-сокетов для фронтенда
+  logLevel: 'debug'
 }));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Proxy server running on port ${PORT}`);
-  console.log(`Backend URL: ${BACKEND_URL}`);
-  console.log(`Frontend URL: ${FRONTEND_URL}`);
+  console.log(`[Proxy] Сервер запущен на порту ${PORT}`);
+  console.log(`[Proxy] Вы можете открыть http://localhost:${PORT} в браузере`);
 }); 
