@@ -2,7 +2,7 @@
   "git": {
     "submodules": true
   },
-  "buildCommand": "node vercel-build.js",
+  "buildCommand": "node ./vercel-build.js",
   "outputDirectory": "dist/apps/frontend",
   "cleanUrls": true,
   "trailingSlash": false
