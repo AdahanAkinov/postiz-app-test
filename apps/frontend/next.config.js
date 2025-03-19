@@ -25,6 +25,11 @@ const nextConfig = {
       },
     ],
   },
+  env: {
+    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://postiz-app-test-production.up.railway.app/api',
+    NEXT_PUBLIC_UPLOAD_DIRECTORY: process.env.NEXT_PUBLIC_UPLOAD_DIRECTORY || '/uploads',
+    NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY || '/uploads'
+  },
   async redirects() {
     return [
       {
@@ -36,7 +41,15 @@ const nextConfig = {
     ];
   },
   async rewrites() {
+    const backendRewrites = process.env.NEXT_PUBLIC_BACKEND_URL ? [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.NEXT_PUBLIC_BACKEND_URL}/:path*`,
+      }
+    ] : [];
+
     return [
+      ...backendRewrites,
       {
         source: '/uploads/:path*',
         destination:

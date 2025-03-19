@@ -3,6 +3,12 @@ const fs = require('fs');
 const path = require('path');
 
 try {
+  // Загружаем переменные окружения из .env.production, если файл существует
+  if (fs.existsSync('.env.production')) {
+    console.log('Загружаем переменные окружения из .env.production...');
+    require('dotenv').config({ path: '.env.production' });
+  }
+
   // Выводим текущую директорию и её содержимое
   console.log('Текущая директория:', process.cwd());
   console.log('Содержимое текущей директории:');
@@ -122,6 +128,17 @@ try {
       fs.mkdirSync(dirPath, { recursive: true });
     }
   }
+
+  // Создаем файл env-config.js для клиентских переменных окружения
+  console.log('Создаем файл env-config.js для клиентских переменных...');
+  const envConfigContent = `
+window.env = {
+  NEXT_PUBLIC_BACKEND_URL: "${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://postiz-app-test-production.up.railway.app/api'}",
+  NEXT_PUBLIC_UPLOAD_DIRECTORY: "${process.env.NEXT_PUBLIC_UPLOAD_DIRECTORY || '/uploads'}",
+  NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: "${process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY || '/uploads'}"
+};
+`;
+  fs.writeFileSync('dist/apps/frontend/env-config.js', envConfigContent);
 
   console.log('Сборка завершена успешно!');
   process.exit(0); // Явно указываем успешное завершение
