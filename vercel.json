@@ -1,0 +1,8 @@
+{
+  "git": {
+    "submodules": true
+  },
+  "buildCommand": "npm run build:frontend",
+  "outputDirectory": "dist/apps/frontend/.next",
+  "framework": "nextjs"
+} 
