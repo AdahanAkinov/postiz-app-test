@@ -4,9 +4,6 @@
   },
   "buildCommand": "npm run build:frontend",
   "outputDirectory": "dist/apps/frontend/.next",
-  "framework": {
-    "name": "nextjs",
-    "version": "14.2.24"
-  },
+  "framework": "nextjs",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD ./apps/frontend"
 } 
