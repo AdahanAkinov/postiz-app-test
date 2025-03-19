@@ -16,55 +16,56 @@ try {
 
   // Создаем директорию public если она не существует
   console.log('Создаем директорию public...');
-  execSync('mkdir -p apps/frontend/public', { stdio: 'inherit' });
+  execSync('mkdir -p public', { stdio: 'inherit' });
+  
+  // Добавляем файл .gitkeep в public
+  console.log('Добавляем .gitkeep в директорию public...');
+  fs.writeFileSync('public/.gitkeep', '');
 
-  // Запускаем сборку Next.js
-  console.log('Запускаем сборку Next.js...');
-  execSync('npx nx run frontend:build:production', { stdio: 'inherit' });
+  // Вместо запуска через Nx, используем напрямую Next.js
+  console.log('Запускаем сборку Next.js напрямую...');
+  execSync('npx next build', { stdio: 'inherit' });
+
+  // Создаем выходную директорию
+  console.log('Создаем выходную директорию...');
+  execSync('mkdir -p ../../dist/apps/frontend', { stdio: 'inherit' });
+
+  // Копируем собранные файлы Next.js в выходную директорию
+  console.log('Копируем файлы сборки в выходную директорию...');
+  execSync('cp -r .next ../../dist/apps/frontend/', { stdio: 'inherit' });
+  
+  // Копируем публичные файлы
+  console.log('Копируем публичные файлы...');
+  execSync('cp -r public ../../dist/apps/frontend/', { stdio: 'inherit' });
 
   // Проверяем структуру директории dist
-  if (fs.existsSync('dist')) {
+  if (fs.existsSync('../../dist')) {
     console.log('Структура директории dist:');
-    execSync('ls -la dist', { stdio: 'inherit' });
+    execSync('ls -la ../../dist', { stdio: 'inherit' });
   } else {
     console.error('ОШИБКА: Директория dist не существует!');
   }
 
-  if (fs.existsSync('dist/apps')) {
+  if (fs.existsSync('../../dist/apps')) {
     console.log('Структура директории dist/apps:');
-    execSync('ls -la dist/apps', { stdio: 'inherit' });
+    execSync('ls -la ../../dist/apps', { stdio: 'inherit' });
   } else {
     console.error('ОШИБКА: Директория dist/apps не существует!');
   }
 
-  if (fs.existsSync('dist/apps/frontend')) {
+  if (fs.existsSync('../../dist/apps/frontend')) {
     console.log('Структура директории dist/apps/frontend:');
-    execSync('ls -la dist/apps/frontend', { stdio: 'inherit' });
+    execSync('ls -la ../../dist/apps/frontend', { stdio: 'inherit' });
   } else {
     console.error('ОШИБКА: Директория dist/apps/frontend не существует!');
-    // Создаем директорию если она не существует
-    fs.mkdirSync('dist/apps/frontend', { recursive: true });
-    console.log('Создана директория dist/apps/frontend');
   }
 
   // Проверяем структуру .next
-  if (fs.existsSync('dist/apps/frontend/.next')) {
+  if (fs.existsSync('../../dist/apps/frontend/.next')) {
     console.log('Структура директории dist/apps/frontend/.next:');
-    execSync('ls -la dist/apps/frontend/.next', { stdio: 'inherit' });
+    execSync('ls -la ../../dist/apps/frontend/.next', { stdio: 'inherit' });
   } else {
     console.error('ОШИБКА: Директория dist/apps/frontend/.next не существует!');
-    
-    // Проверяем, где может находиться .next
-    console.log('Ищем .next директорию в других местах...');
-    if (fs.existsSync('.next')) {
-      console.log('Нашли .next в корне проекта, копируем...');
-      execSync('cp -r .next dist/apps/frontend/', { stdio: 'inherit' });
-    } else if (fs.existsSync('apps/frontend/.next')) {
-      console.log('Нашли .next в apps/frontend, копируем...');
-      execSync('cp -r apps/frontend/.next dist/apps/frontend/', { stdio: 'inherit' });
-    } else {
-      console.error('КРИТИЧЕСКАЯ ОШИБКА: Не удалось найти директорию .next нигде!');
-    }
   }
 
   // Проверяем наличие файлов манифестов
@@ -77,8 +78,8 @@ try {
 
   // Копируем файлы, если они существуют
   for (const file of requiredFiles) {
-    const sourcePath = path.join('dist/apps/frontend/.next', file);
-    const destPath = path.join('dist/apps/frontend', file);
+    const sourcePath = path.join('../../dist/apps/frontend/.next', file);
+    const destPath = path.join('../../dist/apps/frontend', file);
     
     if (fs.existsSync(sourcePath)) {
       console.log(`Копируем ${file} в корневую директорию...`);
@@ -89,7 +90,7 @@ try {
   }
 
   // Создаем минимальный routes-manifest.json, если его нет
-  const routesManifestPath = 'dist/apps/frontend/routes-manifest.json';
+  const routesManifestPath = '../../dist/apps/frontend/routes-manifest.json';
   if (!fs.existsSync(routesManifestPath)) {
     console.log('Создаем минимальный routes-manifest.json...');
     const minimalRoutesManifest = {
@@ -106,29 +107,6 @@ try {
     fs.writeFileSync(routesManifestPath, JSON.stringify(minimalRoutesManifest, null, 2));
   }
 
-  // Создаем пустые файлы Next.js, если они необходимы
-  const requiredEmptyFiles = [
-    'next-config.json'
-  ];
-  
-  for (const file of requiredEmptyFiles) {
-    const filePath = path.join('dist/apps/frontend', file);
-    if (!fs.existsSync(filePath)) {
-      console.log(`Создаем пустой файл ${file}...`);
-      fs.writeFileSync(filePath, '{}');
-    }
-  }
-
-  // Создаем структуру директорий для Next.js
-  const requiredDirs = ['static', 'server', '_next'];
-  for (const dir of requiredDirs) {
-    const dirPath = path.join('dist/apps/frontend', dir);
-    if (!fs.existsSync(dirPath)) {
-      console.log(`Создаем директорию ${dir}...`);
-      fs.mkdirSync(dirPath, { recursive: true });
-    }
-  }
-
   // Создаем файл env-config.js для клиентских переменных окружения
   console.log('Создаем файл env-config.js для клиентских переменных...');
   const envConfigContent = `
@@ -138,7 +116,7 @@ window.env = {
   NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: "${process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY || '/uploads'}"
 };
 `;
-  fs.writeFileSync('dist/apps/frontend/env-config.js', envConfigContent);
+  fs.writeFileSync('../../dist/apps/frontend/env-config.js', envConfigContent);
 
   console.log('Сборка завершена успешно!');
   process.exit(0); // Явно указываем успешное завершение
