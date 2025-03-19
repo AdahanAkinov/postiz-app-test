@@ -4,11 +4,6 @@
   },
   "buildCommand": "node vercel-build.js",
   "outputDirectory": "dist/apps/frontend",
-  "framework": "nextjs",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
-    }
-  ]
+  "cleanUrls": true,
+  "trailingSlash": false
 } 
