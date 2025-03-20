@@ -2,17 +2,38 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// Определяем пути
+const rootDir = process.cwd();
+const frontendDir = path.join(rootDir, 'apps', 'frontend');
+
 try {
+  console.log('====== НАЧАЛО СБОРКИ ======');
+  console.log('Текущая директория (rootDir):', rootDir);
+  console.log('Путь к frontend:', frontendDir);
+  console.log('Содержимое корневого каталога:');
+  execSync('ls -la', { stdio: 'inherit' });
+  
+  // Переходим в директорию frontend для дальнейшей работы
+  console.log('Переходим в директорию frontend...');
+  process.chdir(frontendDir);
+  console.log('Новая текущая директория:', process.cwd());
+  console.log('Содержимое директории frontend:');
+  execSync('ls -la', { stdio: 'inherit' });
+
   // Загружаем переменные окружения из .env.production, если файл существует
   if (fs.existsSync('.env.production')) {
     console.log('Загружаем переменные окружения из .env.production...');
     require('dotenv').config({ path: '.env.production' });
+  } else {
+    console.log('Файл .env.production не найден. Проверяем в корне проекта...');
+    const rootEnvPath = path.join(rootDir, '.env.production');
+    if (fs.existsSync(rootEnvPath)) {
+      console.log('Загружаем переменные окружения из корня проекта...');
+      require('dotenv').config({ path: rootEnvPath });
+    } else {
+      console.log('Файл .env.production не найден ни в frontend, ни в корне проекта.');
+    }
   }
-
-  // Выводим текущую директорию и её содержимое
-  console.log('Текущая директория:', process.cwd());
-  console.log('Содержимое текущей директории:');
-  execSync('ls -la', { stdio: 'inherit' });
 
   // Создаем директорию public если она не существует
   console.log('Создаем директорию public...');
@@ -82,6 +103,13 @@ try {
   console.log('Записываем временный next.config.js для Vercel...');
   fs.writeFileSync('next.config.js', tempNextConfig);
   
+  // Установка зависимостей (на всякий случай)
+  console.log('Проверка node_modules...');
+  if (!fs.existsSync('node_modules')) {
+    console.log('node_modules отсутствует, пробуем установить зависимости...');
+    execSync('npm install --no-save', { stdio: 'inherit' });
+  }
+  
   // Запускаем сборку
   console.log('Запускаем сборку Next.js...');
   execSync('npx next build', { stdio: 'inherit' });
@@ -93,23 +121,28 @@ try {
     fs.unlinkSync('next.config.js.backup');
   }
 
+  // Возвращаемся в корневую директорию
+  process.chdir(rootDir);
+  
   // Создаем директорию для вывода
   console.log('Создаем директорию dist...');
   execSync('mkdir -p dist', { stdio: 'inherit' });
 
   // Проверяем наличие директории .next
-  if (!fs.existsSync('.next')) {
+  const nextDir = path.join(frontendDir, '.next');
+  if (!fs.existsSync(nextDir)) {
     console.error('ОШИБКА: Директория .next не существует после сборки!');
+    console.error('Путь к .next должен быть:', nextDir);
     process.exit(1);
   }
 
   // Копируем полностью папку .next
   console.log('Копируем полностью папку .next...');
-  execSync('cp -r .next dist/', { stdio: 'inherit' });
+  execSync(`cp -r ${nextDir} dist/`, { stdio: 'inherit' });
   
   // Копируем public в dist/public
   console.log('Копируем публичные файлы...');
-  execSync('cp -r public dist/', { stdio: 'inherit' });
+  execSync(`cp -r ${path.join(frontendDir, 'public')} dist/`, { stdio: 'inherit' });
 
   // Копируем package.json и создаем базовые файлы для Vercel
   console.log('Создаем package.json для Vercel...');
@@ -157,11 +190,12 @@ module.exports = {
   fs.writeFileSync('dist/next.config.js', vercelNextConfig);
 
   // Если есть middleware.ts, копируем его
-  if (fs.existsSync('src/middleware.ts')) {
+  const middlewarePath = path.join(frontendDir, 'src/middleware.ts');
+  if (fs.existsSync(middlewarePath)) {
     console.log('Копируем middleware.ts...');
     // Создаем папку src если её нет
     execSync('mkdir -p dist/src', { stdio: 'inherit' });
-    execSync('cp src/middleware.ts dist/src/', { stdio: 'inherit' });
+    execSync(`cp ${middlewarePath} dist/src/`, { stdio: 'inherit' });
   }
 
   // Создаем файл env-config.js для клиентских переменных окружения
@@ -214,10 +248,11 @@ export default function Home() {
   execSync('ls -la dist', { stdio: 'inherit' });
   execSync('ls -la dist/.next', { stdio: 'inherit' });
 
-  console.log('Сборка завершена успешно!');
+  console.log('====== СБОРКА ЗАВЕРШЕНА УСПЕШНО ======');
   process.exit(0); // Явно указываем успешное завершение
 } catch (error) {
-  console.error('ОШИБКА В ПРОЦЕССЕ СБОРКИ:');
+  console.error('====== ОШИБКА В ПРОЦЕССЕ СБОРКИ ======');
   console.error(error);
+  console.error('Стек вызовов:', error.stack);
   process.exit(1); // Выходим с кодом ошибки
 } 
