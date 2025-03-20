@@ -26,35 +26,52 @@ try {
   console.log('Запускаем сборку Next.js напрямую...');
   execSync('npx next build', { stdio: 'inherit' });
 
-  // Создаем выходную директорию
+  // Создаем выходную директорию для Vercel (это должен быть корневой каталог)
   console.log('Создаем выходную директорию...');
   execSync('mkdir -p dist', { stdio: 'inherit' });
 
-  // Копируем собранные файлы Next.js в выходную директорию
-  console.log('Копируем файлы сборки в выходную директорию...');
+  // Копируем .next директорию целиком
+  console.log('Копируем файлы сборки .next...');
   execSync('cp -r .next dist/', { stdio: 'inherit' });
   
   // Копируем публичные файлы
   console.log('Копируем публичные файлы...');
   execSync('cp -r public dist/', { stdio: 'inherit' });
 
-  // Проверяем структуру директории dist
-  if (fs.existsSync('dist')) {
-    console.log('Структура директории dist:');
-    execSync('ls -la dist', { stdio: 'inherit' });
-  } else {
-    console.error('ОШИБКА: Директория dist не существует!');
+  // Создаем package.json для Vercel с правильными скриптами запуска
+  console.log('Создаем package.json для Vercel...');
+  const packageJson = {
+    "name": "postiz-app",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+      "dev": "next dev",
+      "build": "next build",
+      "start": "next start"
+    },
+    "dependencies": {
+      "next": "14.2.24",
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    }
+  };
+  fs.writeFileSync('dist/package.json', JSON.stringify(packageJson, null, 2));
+
+  // Копируем next.config.js
+  console.log('Копируем next.config.js...');
+  execSync('cp next.config.js dist/', { stdio: 'inherit' });
+  
+  // Копируем middleware.js, если он существует
+  if (fs.existsSync('src/middleware.ts')) {
+    console.log('Копируем middleware.ts...');
+    execSync('cp src/middleware.ts dist/', { stdio: 'inherit' });
   }
 
-  // Проверяем структуру .next в dist
-  if (fs.existsSync('dist/.next')) {
-    console.log('Структура директории dist/.next:');
-    execSync('ls -la dist/.next', { stdio: 'inherit' });
-  } else {
-    console.error('ОШИБКА: Директория dist/.next не существует!');
-  }
+  // Копируем .env.production для корректной работы
+  console.log('Копируем .env.production...');
+  execSync('cp .env.production dist/', { stdio: 'inherit' });
 
-  // Проверяем наличие файлов манифестов
+  // Копируем все необходимые файлы
   const requiredFiles = [
     'routes-manifest.json',
     'build-manifest.json',
@@ -75,22 +92,37 @@ try {
     }
   }
 
-  // Создаем минимальный routes-manifest.json, если его нет
-  const routesManifestPath = 'dist/routes-manifest.json';
-  if (!fs.existsSync(routesManifestPath)) {
-    console.log('Создаем минимальный routes-manifest.json...');
-    const minimalRoutesManifest = {
-      version: 3,
-      basePath: "",
-      pages404: true,
-      redirects: [],
-      headers: [],
-      dynamicRoutes: [],
-      staticRoutes: [],
-      dataRoutes: [],
-      rewrites: []
-    };
-    fs.writeFileSync(routesManifestPath, JSON.stringify(minimalRoutesManifest, null, 2));
+  // Проверяем структуру директории dist
+  console.log('Структура выходной директории dist:');
+  execSync('ls -la dist', { stdio: 'inherit' });
+  console.log('Структура директории dist/.next:');
+  execSync('ls -la dist/.next', { stdio: 'inherit' });
+
+  // Создаем next.config.js в выходной директории, если его там нет
+  if (!fs.existsSync('dist/next.config.js')) {
+    console.log('Создаем next.config.js в выходной директории...');
+    const nextConfig = `
+module.exports = {
+  env: {
+    NEXT_PUBLIC_BACKEND_URL: "${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://postiz-app-test-production.up.railway.app/api'}",
+    NEXT_PUBLIC_UPLOAD_DIRECTORY: "${process.env.NEXT_PUBLIC_UPLOAD_DIRECTORY || '/uploads'}",
+    NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: "${process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY || '/uploads'}"
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: "${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://postiz-app-test-production.up.railway.app/api'}/:path*",
+      },
+      {
+        source: '/uploads/:path*',
+        destination: "${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://postiz-app-test-production.up.railway.app/api'}/uploads/:path*",
+      }
+    ];
+  }
+};
+    `;
+    fs.writeFileSync('dist/next.config.js', nextConfig);
   }
 
   // Создаем файл env-config.js для клиентских переменных окружения
@@ -102,7 +134,7 @@ window.env = {
   NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: "${process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY || '/uploads'}"
 };
 `;
-  fs.writeFileSync('dist/env-config.js', envConfigContent);
+  fs.writeFileSync('dist/public/env.js', envConfigContent);
 
   console.log('Сборка завершена успешно!');
   process.exit(0); // Явно указываем успешное завершение
